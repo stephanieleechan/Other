@@ -52,3 +52,18 @@ def print_odds(start, final, order):
         success = False 
         
     return success
+    
+start_value = int(input('Enter start value: '))
+final_value = int(input('Enter final value: '))
+order_str = input('Enter order: ')
+
+print()
+
+successful = print_odds(start_value,final_value, order_str)
+
+print('')
+
+if successful:
+    print('Report: Printing completed successfully')
+else:
+    print('Report: Printing Failed')
