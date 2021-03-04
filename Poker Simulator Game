@@ -1,1 +1,388 @@
-in progress
+Option Explicit
+
+Const NUMSHUFFLES = 1000
+
+Dim suits(1 To 4) As String
+Dim ranks(2 To 14) As Integer
+Dim deck(1 To 52) As String
+Dim hand(1 To 5) As String
+Dim hand_rank(1 To 5) As Integer
+Dim hand_suit(1 To 5) As String
+Dim count_rank(2 To 14) As Integer
+Dim count_bust As Long
+Dim count_pair As Long
+Dim count_pair2 As Integer
+Dim count_kind3 As Integer
+Dim count_kind4 As Integer
+Dim count_straight As Integer
+Dim count_flush As Integer
+Dim count_fullhouse As Integer
+Dim count_straightflush As Integer
+Dim count_royalflush As Integer
+Dim num_hands As Long
+Dim straight As Boolean
+Dim flush As Boolean
+Dim royal As Boolean
+Dim royalflush As Boolean
+
+
+' --- Main ----------------------------------------------------
+
+Sub Main()
+
+    Dim i As Long
+    
+    Initialize
+    CreateDeck
+    
+    For i = 1 To num_hands
+        ShuffleDeck
+        CreateHand
+        CheckMiscHands
+        CheckStraight
+        CheckFlush
+        CheckStraightFlush
+        CheckRoyalFlush
+        UpdateCounter i
+    Next i
+    
+    DisplayOnSheet
+    
+End Sub
+
+' --- Initialize arrays ----------------------------------------------------
+
+Sub Initialize()
+
+    Dim i As Integer
+    
+    count_bust = 0
+    count_pair = 0
+    count_pair2 = 0
+    count_kind3 = 0
+    count_kind4 = 0
+    count_straight = 0
+    count_flush = 0
+    count_fullhouse = 0
+    count_straightflush = 0
+    count_royalflush = 0
+    
+    For i = 1 To 5
+        hand(i) = ""
+        hand_rank(i) = 0
+        hand_suit(i) = ""
+    Next i
+    
+    For i = 1 To 52
+        deck(i) = ""
+    Next i
+    
+    For i = 1 To 4
+        suits(i) = ""
+    Next i
+    
+    For i = 2 To 14
+        ranks(i) = 0
+        count_rank(i) = 0
+    Next i
+
+    num_hands = Sheet1.Range("D5").Value
+    ClearSheet
+    Randomize
+
+End Sub
+
+'--- Clear the data portions of the sheet ---------------------------------------
+
+Sub ClearSheet()
+    
+    Sheet1.Range("H10:H21").Value = ""
+    Sheet1.Range("G10:G21").Value = ""
+
+End Sub
+
+' --- Create the 52 cards of a deck ----------------------------------------------------
+
+Sub CreateDeck()
+
+    Dim r As Integer
+    Dim s As Integer
+    Dim c As Integer
+   
+    suits(1) = "D"
+    suits(2) = "H"
+    suits(3) = "C"
+    suits(4) = "S"
+    
+    c = 1
+    For r = 2 To 14
+        For s = 1 To 4
+            deck(c) = r & suits(s)
+            c = c + 1
+        Next s
+    Next r
+
+End Sub
+
+' --- Shuffle the deck of cards ----------------------------------------------------
+
+Sub ShuffleDeck()
+
+    Dim Temp As String
+    Dim x As Integer
+    Dim a As Integer
+    Dim b As Integer
+    
+    For x = 1 To NUMSHUFFLES
+        a = Int(51 * Rnd + 1)
+        b = Int(51 * Rnd + 1)
+        Temp = deck(a)
+        deck(a) = deck(b)
+        deck(b) = Temp
+    Next x
+    
+End Sub
+
+ ' --- Print the full deck ----------------------------------------------------
+
+Sub PrintDeck()
+
+    Dim i As Integer
+
+    For i = 1 To 52
+        Debug.Print deck(i)
+    Next i
+    
+End Sub
+
+' --- Create one hand ----------------------------------------------------
+
+Sub CreateHand()
+
+    Dim i As Integer
+    
+    For i = 1 To 5
+        hand(i) = deck(i)
+        hand_rank(i) = Int(Left$(deck(i), Len(deck(i)) - 1))
+        hand_suit(i) = Right$(deck(i), 1)
+    Next i
+    
+End Sub
+
+' --- Check hand for flush ----------------------------------------------------
+
+Sub CheckFlush()
+
+    Dim i As Integer
+    Dim first_suit As String
+
+    i = 1
+    flush = True
+    first_suit = hand_suit(1)
+    While i <= 5 And flush
+        If hand_suit(i) <> first_suit Then
+            flush = False
+        End If
+        i = i + 1
+    Wend
+    
+    If flush Then
+        count_flush = count_flush + 1
+    End If
+
+End Sub
+
+' --- Check hand for bust, pair, 2pair, kind3, kind4 ----------------------------------------------------
+
+Sub CheckMiscHands()
+    
+    Dim i As Integer
+    Dim j As Integer
+    Dim countp As Integer
+    Dim busted As Boolean
+
+    'Count how often each rank appears in the hand
+    For i = 2 To 14
+        count_rank(i) = 0
+        For j = 1 To 5
+            If i = hand_rank(j) Then
+                count_rank(i) = count_rank(i) + 1
+            End If
+        Next j
+    Next i
+       
+    ' Count pair, 2 pair, 3 of a kind, 4 of a kind
+    countp = 0
+    For i = 2 To 14
+        If count_rank(i) = 2 Then
+            countp = countp + 1
+        ElseIf count_rank(i) = 3 Then
+            count_kind3 = count_kind3 + 1
+        ElseIf count_rank(i) = 4 Then
+            count_kind4 = count_kind4 + 1
+        End If
+    Next i
+    
+    'Decide whether 1 pair or 2 pair
+    
+    If countp = 1 Then
+        count_pair = count_pair + 1
+    ElseIf countp = 2 Then
+        count_pair2 = count_pair2 + 1
+    End If
+    
+    ' Count full house
+    If count_kind3 = 1 And countp = 1 Then
+        count_fullhouse = count_fullhouse + 1
+        count_kind3 = count_kind3 - 1
+        count_pair = count_pair - 1
+    End If
+    
+    'Check whether a bust
+    i = 2
+    busted = True
+    While i <= 14 And busted
+        If count_rank(i) > 1 Then
+            busted = False
+        End If
+        i = i + 1
+    Wend
+    If busted Then
+        count_bust = count_bust + 1
+    End If
+        
+End Sub
+
+'--- Check StraightFlush -----------------------------------------------------------------
+
+Sub CheckStraightFlush()
+
+    If straight And flush Then
+        count_straightflush = count_straightflush + 1
+    End If
+    
+End Sub
+
+'--- Bubble sort an array of integers in ascending order ----------------------------------------
+
+Public Sub BubbleSort(HRank() As Integer, ByVal Num As Integer)
+
+    Dim Pass As Integer
+    Dim x As Integer
+    Dim Done As Boolean
+    
+    Pass = 1
+    Done = False
+    Do While (Pass < Num) And Not Done
+        Done = True
+        For x = 1 To Num - Pass
+            If HRank(x) > HRank(x + 1) Then
+                Swap HRank(x), HRank(x + 1)
+                Done = False
+            End If
+        Next x
+        Pass = Pass + 1
+    Loop
+    
+End Sub
+
+'--- Swap 2 integers --------------------------------------
+
+Private Sub Swap(Item1 As Integer, Item2 As Integer)
+
+    Dim Temp As Integer
+
+    Temp = Item1
+    Item1 = Item2
+    Item2 = Temp
+    
+End Sub
+
+'--- Check if hand is straight ---------------------------------------------
+
+Sub CheckStraight()
+
+    Dim x As Integer
+    
+    BubbleSort hand_rank, 5
+    
+    'Check for straight
+    x = 1
+    straight = True
+    While x <= 4 And straight
+        If hand_rank(x + 1) - hand_rank(x) = 1 Then
+            x = x + 1
+        Else
+            straight = False
+        End If
+    Wend
+
+    'Count straight
+    If straight Then
+        count_straight = count_straight + 1
+    End If
+    
+    'Check for royal,ie, 10,11,12,13,14
+    royal = False
+    If straight And hand_rank(1) = 10 Then
+        royal = True
+    End If
+    
+End Sub
+
+'--- Check for royal flush ---------------------------------------
+
+Sub CheckRoyalFlush()
+
+    If royal And flush Then
+        count_royalflush = count_royalflush + 1
+    End If
+    
+End Sub
+
+'--- Update counter of hands on sheet -----------------------------
+
+Sub UpdateCounter(ByVal c As Long)
+
+    Sheet1.Range("J5").Value = c & "/" & num_hands
+
+End Sub
+
+'--- Display all probability percentages on sheet -----------------------------
+
+Sub DisplayOnSheet()
+
+    With Sheet1
+    
+        ' Display percentages
+        .Range("H10").Value = 100 * (count_bust / num_hands)
+        .Range("H11").Value = 100 * (count_pair / num_hands)
+        .Range("H12").Value = 100 * (count_pair2 / num_hands)
+        .Range("H13").Value = 100 * (count_kind3 / num_hands)
+        .Range("H14").Value = 100 * (count_straight / num_hands)
+        .Range("H15").Value = 100 * (count_flush / num_hands)
+        .Range("H16").Value = 100 * (count_fullhouse / num_hands)
+        .Range("H17").Value = 100 * (count_kind4 / num_hands)
+        .Range("H18").Value = 100 * (count_straightflush / num_hands)
+        .Range("H19").Value = 100 * (count_royalflush / num_hands)
+        
+        ' Display numbers
+        .Range("G10").Value = count_bust
+        .Range("G11").Value = count_pair
+        .Range("G12").Value = count_pair2
+        .Range("G13").Value = count_kind3
+        .Range("G14").Value = count_straight
+        .Range("G15").Value = count_flush
+        .Range("G16").Value = count_fullhouse
+        .Range("G17").Value = count_kind4
+        .Range("G18").Value = count_straightflush
+        .Range("G19").Value = count_royalflush
+      
+        ' Display totals
+        .Range("G21").Formula = "=sum(G10:G19)"
+        .Range("H21").Formula = "=sum(H10:H19)"
+        
+    End With
+        
+End Sub
+
